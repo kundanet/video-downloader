@@ -1,0 +1,8 @@
+__pycache__/
+build/
+dist/
+*.spec
+# Tools are downloaded by get_tools.bat, never committed
+*.exe
+ffmpeg*/
+download_log.txt

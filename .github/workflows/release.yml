@@ -1,0 +1,43 @@
+name: Build release
+
+on:
+  push:
+    tags: ["v*"]          # e.g. git tag v1.1.0 && git push --tags
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Stamp version from tag
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          (Get-Content video_downloader.py) -replace 'APP_VERSION = ".*"', "APP_VERSION = `"$v`"" | Set-Content video_downloader.py -Encoding utf8
+
+      - name: Build exe
+        run: |
+          pip install pyinstaller
+          pyinstaller --noconsole --onefile --name VideoDownloader video_downloader.py
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force pkg | Out-Null
+          Copy-Item dist/VideoDownloader.exe pkg/
+          Copy-Item get_tools.bat, get_tools.ps1, README.md pkg/
+          Compress-Archive -Path pkg/* -DestinationPath "VideoDownloader-${{ github.ref_name }}.zip"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: VideoDownloader-*.zip
+          generate_release_notes: true
